@@ -1,0 +1,8 @@
+google-generativeai
+pandas
+kaggle
+python-dotenv
+ipykernel
+nbformat
+tqdm
+bs4
