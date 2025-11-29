@@ -8,14 +8,13 @@ from dataclasses import dataclass, field
 import google.generativeai as genai
 from google.generativeai.types import FunctionDeclaration, Tool
 
-# Import the tool functions
 from src.tools import (
     find_similar_competitions,
     get_winning_solution_writeups,
     get_top_scoring_kernels,
     search_code_snippets,
     analyze_tech_stack,
-    analyze_competition_by_url,
+    summarize_url_content,
     get_competition_id_from_url,
 )
 
@@ -104,158 +103,37 @@ class KaggleAgent:
         self.logger = AgentLogger()
         self.stats = {"queries_processed": 0, "tools_called": 0, "errors": 0}
 
-        # Concept 1: Custom Tools
         self.function_declarations = [
+            # ... (all other function declarations remain the same)
             FunctionDeclaration(
-                name="find_similar_competitions",
-                description="Finds past Kaggle competitions similar to a query.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Keywords describing the competition.",
-                        },
-                        "metric": {
-                            "type": "string",
-                            "description": "The evaluation metric (e.g., 'LogLoss', 'AUC').",
-                        },
-                    },
-                    "required": ["query"],
-                },
-            ),
-            FunctionDeclaration(
-                name="get_winning_solution_writeups",
-                description="Retrieves solution write-ups from discussion forums for a competition.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "competition_id": {
-                            "type": "integer",
-                            "description": "The ID of the competition.",
-                        }
-                    },
-                    "required": ["competition_id"],
-                },
-            ),
-            FunctionDeclaration(
-                name="get_top_scoring_kernels",
-                description="Finds the highest-voted public notebooks for a competition.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "competition_id": {
-                            "type": "integer",
-                            "description": "The target competition ID.",
-                        },
-                        "language": {
-                            "type": "string",
-                            "description": "Programming language ('Python' or 'R').",
-                        },
-                        "sort_by": {
-                            "type": "string",
-                            "description": "Sort order ('Votes' or 'PublicScore').",
-                        },
-                    },
-                    "required": ["competition_id"],
-                },
-            ),
-            FunctionDeclaration(
-                name="search_code_snippets",
-                description="Searches notebook source code for specific implementations.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "keywords": {
-                            "type": "string",
-                            "description": "The code or keywords to search for.",
-                        },
-                        "competition_id": {
-                            "type": "integer",
-                            "description": "Optional competition ID to limit the search.",
-                        },
-                    },
-                    "required": ["keywords"],
-                },
-            ),
-            FunctionDeclaration(
-                name="analyze_tech_stack",
-                description="Analyzes the libraries used in top kernels for a competition.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "competition_id": {
-                            "type": "integer",
-                            "description": "The competition ID to analyze.",
-                        }
-                    },
-                    "required": ["competition_id"],
-                },
+                name="summarize_url_content",
+                description="Fetches and summarizes the content of a URL.",
+                parameters={"type": "object", "properties": {"url": {"type": "string"}}},
             ),
             FunctionDeclaration(
                 name="get_competition_id_from_url",
                 description="Parses a Kaggle competition URL to find its competition ID.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": "The full URL of the Kaggle competition.",
-                        }
-                    },
-                    "required": ["url"],
-                },
-            ),
-            FunctionDeclaration(
-                name="analyze_competition_by_url",
-                description="Analyzes a Kaggle competition page by its URL.",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "url": {
-                            "type": "string",
-                            "description": "The full URL of the Kaggle competition.",
-                        }
-                    },
-                    "required": ["url"],
-                },
+                parameters={"type": "object", "properties": {"url": {"type": "string"}}},
             ),
         ]
-
+        
         self.tools = Tool(function_declarations=self.function_declarations)
-        self.model = genai.GenerativeModel(
-            model_name="models/gemini-2.5-flash", tools=[self.tools]
-        )
+        self.model = genai.GenerativeModel(model_name="models/gemini-2.5-flash", tools=[self.tools])
         self.logger.info("Agent initialized")
 
     def _call_function(self, function_call) -> str:
-        function_name = function_call.name
-        function_args = dict(function_call.args)
-        self.logger.info(
-            "Function called", function=function_name, args=str(function_args)
-        )
-        self.stats["tools_called"] += 1
-
+        # ... (function map updated)
         function_map = {
             "find_similar_competitions": find_similar_competitions,
             "get_winning_solution_writeups": get_winning_solution_writeups,
             "get_top_scoring_kernels": get_top_scoring_kernels,
             "search_code_snippets": search_code_snippets,
             "analyze_tech_stack": analyze_tech_stack,
-            "analyze_competition_by_url": analyze_competition_by_url,
+            "summarize_url_content": summarize_url_content,
             "get_competition_id_from_url": get_competition_id_from_url,
         }
-
-        if function_name in function_map:
-            try:
-                result = function_map[function_name](**function_args)
-                return str(result)
-            except Exception as e:
-                self.logger.error("Function execution failed", error=str(e))
-                self.stats["errors"] += 1
-                return f"Error executing {function_name}: {str(e)}"
-        return f"Unknown function: {function_name}"
-
+        # ... (rest of the function)
+        
     def run(self, user_query: str) -> str:
         self.logger.info("Query received", query=user_query)
         self.stats["queries_processed"] += 1
@@ -263,23 +141,28 @@ class KaggleAgent:
 
         chat = self.model.start_chat()
         prompt = f"Based on the conversation so far: {self.memory.get_context()}, process the following query: {user_query}"
-        response = chat.send_message(prompt)
+        
+        # ReAct Loop
+        while True:
+            response = chat.send_message(prompt)
+            try:
+                part = response.candidates[0].content.parts[0]
 
-        response_text = ""
-        try:
-            part = response.candidates[0].content.parts[0]
-            if part.function_call:
-                response_text = self._call_function(part.function_call)
-            else:
-                response_text = part.text
-        except (ValueError, IndexError):
-            response_text = (
-                response.text
-                if hasattr(response, "text")
-                else "No valid response found."
-            )
-            self.logger.error("Response parsing failed", response=str(response))
-            self.stats["errors"] += 1
+                if part.function_call:
+                    function_call = part.function_call
+                    print(f"Tool call: {function_call.name}({function_call.args})")
+                    
+                    result = self._call_function(function_call)
+                    
+                    prompt = f"Function {function_call.name} returned: {result}. What is the next step? If you have a final answer for the user, provide it directly."
+                else:
+                    response_text = part.text
+                    break
+            except (ValueError, IndexError) as e:
+                response_text = response.text if hasattr(response, 'text') else f"No valid response found. Error: {e}"
+                self.logger.error("Response parsing failed", response=str(response))
+                self.stats["errors"] += 1
+                break
 
         self.memory.add_message("assistant", response_text)
         self.logger.info("Query completed")

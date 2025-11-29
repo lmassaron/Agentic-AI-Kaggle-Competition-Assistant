@@ -12,14 +12,6 @@ from src.kaggle_api import (
 )
 from src.built_in_tools import web_fetch  # Import web_fetch
 
-# Load the datasets once when the module is imported
-try:
-    datasets = load_data()
-except Exception as e:
-    print(f"Warning: Could not load Kaggle datasets. Tools will not work. Error: {e}")
-    datasets = None
-
-
 def find_similar_competitions(query: str, metric: str = None):
     """
     Searches the Competitions table to find past challenges with similar titles,
@@ -135,19 +127,22 @@ def analyze_tech_stack(competition_id: int):
     return f"Tech stack analysis (library: usage_frequency): {sorted_stack}"
 
 
-def analyze_competition_by_url(url: str):
-    """
-    Analyzes a Kaggle competition page by its URL to provide a summary.
-    """
-    print(f"Analyzing competition at URL: {url}")
+import google.generativeai as genai
 
-    # Use the web_fetch tool to get the content of the page
-    # This assumes web_fetch is available in the agent's context
-    page_content = web_fetch(prompt=f"Get the content of {url}")
+def summarize_url_content(url: str):
+    """Fetches and summarizes the content of a URL."""
+    print(f"Fetching and summarizing URL: {url}")
+    content = web_fetch(prompt=f"Get the content of {url}")
 
-    if "Error" in page_content:
-        return f"Could not fetch the content of the URL: {page_content}"
+    if "Error" in content or "Simulated content" not in content:
+        return f"Could not fetch valid content from the URL: {url}"
 
-    # Here, you would typically use another LLM call to summarize the content,
-    # but for now, we'll return a placeholder analysis.
-    return f"Successfully fetched content from {url}. Analysis would go here."
+    try:
+        summarizer_model = genai.GenerativeModel("models/gemini-2.5-flash")
+        response = summarizer_model.generate_content(
+            f"Please summarize the following content from a Kaggle competition page, focusing on the competition's objective, evaluation metric, and timeline:\\n\\n{content}"
+        )
+        return response.text
+    except Exception as e:
+        return f"An error occurred during summarization: {e}"
+
