@@ -108,17 +108,25 @@ class KaggleAgent:
             FunctionDeclaration(
                 name="summarize_url_content",
                 description="Fetches and summarizes the content of a URL.",
-                parameters={"type": "object", "properties": {"url": {"type": "string"}}},
+                parameters={
+                    "type": "object",
+                    "properties": {"url": {"type": "string"}},
+                },
             ),
             FunctionDeclaration(
                 name="get_competition_id_from_url",
                 description="Parses a Kaggle competition URL to find its competition ID.",
-                parameters={"type": "object", "properties": {"url": {"type": "string"}}},
+                parameters={
+                    "type": "object",
+                    "properties": {"url": {"type": "string"}},
+                },
             ),
         ]
-        
+
         self.tools = Tool(function_declarations=self.function_declarations)
-        self.model = genai.GenerativeModel(model_name="models/gemini-2.5-flash", tools=[self.tools])
+        self.model = genai.GenerativeModel(
+            model_name="models/gemini-2.5-flash", tools=[self.tools]
+        )
         self.logger.info("Agent initialized")
 
     def _call_function(self, function_call) -> str:
@@ -133,7 +141,7 @@ class KaggleAgent:
             "get_competition_id_from_url": get_competition_id_from_url,
         }
         # ... (rest of the function)
-        
+
     def run(self, user_query: str) -> str:
         self.logger.info("Query received", query=user_query)
         self.stats["queries_processed"] += 1
@@ -141,7 +149,7 @@ class KaggleAgent:
 
         chat = self.model.start_chat()
         prompt = f"Based on the conversation so far: {self.memory.get_context()}, process the following query: {user_query}"
-        
+
         # ReAct Loop
         while True:
             response = chat.send_message(prompt)
@@ -151,15 +159,19 @@ class KaggleAgent:
                 if part.function_call:
                     function_call = part.function_call
                     print(f"Tool call: {function_call.name}({function_call.args})")
-                    
+
                     result = self._call_function(function_call)
-                    
+
                     prompt = f"Function {function_call.name} returned: {result}. What is the next step? If you have a final answer for the user, provide it directly."
                 else:
                     response_text = part.text
                     break
             except (ValueError, IndexError) as e:
-                response_text = response.text if hasattr(response, 'text') else f"No valid response found. Error: {e}"
+                response_text = (
+                    response.text
+                    if hasattr(response, "text")
+                    else f"No valid response found. Error: {e}"
+                )
                 self.logger.error("Response parsing failed", response=str(response))
                 self.stats["errors"] += 1
                 break

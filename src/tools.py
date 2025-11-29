@@ -8,9 +8,11 @@ from src.kaggle_api import (
     search_code_snippets_query,
     analyze_tech_stack_query,
     get_competition_id_from_slug_query,
-    load_data,
 )
 from src.built_in_tools import web_fetch  # Import web_fetch
+
+datasets = {}
+
 
 def find_similar_competitions(query: str, metric: str = None):
     """
@@ -129,6 +131,7 @@ def analyze_tech_stack(competition_id: int):
 
 import google.generativeai as genai
 
+
 def summarize_url_content(url: str):
     """Fetches and summarizes the content of a URL."""
     print(f"Fetching and summarizing URL: {url}")
@@ -145,4 +148,3 @@ def summarize_url_content(url: str):
         return response.text
     except Exception as e:
         return f"An error occurred during summarization: {e}"
-
