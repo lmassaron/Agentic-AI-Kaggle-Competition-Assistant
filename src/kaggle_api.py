@@ -122,20 +122,35 @@ def search_code_snippets_query(keywords, competition_slug=None):
                 files = glob.glob(os.path.join(temp_dir, "*"))
                 for file_path in files:
                     if os.path.isfile(file_path):
-                        with open(file_path, 'r', errors='ignore') as f:
-                            content = f.read()
-                            if keywords in content:
-                                # Extract snippet
-                                lines = content.split('\n')
-                                for i, line in enumerate(lines):
-                                    if keywords in line:
-                                        snippet = "\n".join(lines[max(0, i - 2) : i + 3])
-                                        found_snippets.append({
-                                            "Title": k.title,
-                                            "URL": f"https://www.kaggle.com/{k.ref}",
-                                            "Snippet": snippet
-                                        })
-                                        break
+                        content = ""
+                        if file_path.endswith(".ipynb"):
+                            import json
+                            try:
+                                with open(file_path, 'r', errors='ignore') as f:
+                                    notebook = json.load(f)
+                                    for cell in notebook.get('cells', []):
+                                        if cell.get('cell_type') == 'code':
+                                            source_code = "".join(cell.get('source', []))
+                                            # Keep track of cell content for context
+                                            content += source_code + "\n"
+                            except Exception:
+                                pass
+                        else:
+                            with open(file_path, 'r', errors='ignore') as f:
+                                content = f.read()
+
+                        if keywords in content:
+                            # Extract snippet
+                            lines = content.split('\n')
+                            for i, line in enumerate(lines):
+                                if keywords in line:
+                                    snippet = "\n".join(lines[max(0, i - 2) : i + 3])
+                                    found_snippets.append({
+                                        "Title": k.title,
+                                        "URL": f"https://www.kaggle.com/{k.ref}",
+                                        "Snippet": snippet
+                                    })
+                                    break
                         os.remove(file_path)
                         
             except Exception as e:
@@ -162,21 +177,38 @@ def analyze_tech_stack_query(competition_slug):
     with tempfile.TemporaryDirectory() as temp_dir:
         for k in kernels:
             try:
+                # Download kernel code
                 api.kernels_pull(k.ref, path=temp_dir, metadata=False, quiet=True)
                 files = glob.glob(os.path.join(temp_dir, "*"))
                 
                 for file_path in files:
                     if os.path.isfile(file_path):
-                         with open(file_path, 'r', errors='ignore') as f:
-                            content = f.read()
-                            imports = re.findall(
-                                r"^import\s+(\w+)|^from\s+(\w+)", content, re.MULTILINE
-                            )
-                            libs = [item for t in imports for item in t if item]
-                            for lib in set(libs):
-                                library_counts[lib] = library_counts.get(lib, 0) + 1
-                         os.remove(file_path)
-            except Exception:
+                        content = ""
+                        if file_path.endswith(".ipynb"):
+                            import json
+                            try:
+                                with open(file_path, 'r', errors='ignore') as f:
+                                    notebook = json.load(f)
+                                    for cell in notebook.get('cells', []):
+                                        if cell.get('cell_type') == 'code':
+                                            content += "".join(cell.get('source', [])) + "\n"
+                            except Exception:
+                                continue # Skip malformed notebooks
+                        else:
+                             with open(file_path, 'r', errors='ignore') as f:
+                                content = f.read()
+                        
+                        # Find imports
+                        imports = re.findall(
+                            r"^import\s+(\w+)|^from\s+(\w+)", content, re.MULTILINE
+                        )
+                        libs = [item for t in imports for item in t if item]
+                        for lib in set(libs):
+                            library_counts[lib] = library_counts.get(lib, 0) + 1
+                        
+                        os.remove(file_path)
+            except Exception as e:
+                print(f"Error analyzing kernel {k.ref}: {e}")
                 continue
 
     total_kernels = len(kernels)

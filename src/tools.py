@@ -18,6 +18,8 @@ def find_similar_competitions(query: str, metric: str = None):
     Searches the Competitions table to find past challenges with similar titles,
     descriptions, or tags.
     """
+    if metric == "None":
+        metric = None
 
     print(f"Finding similar competitions for query: '{query}', metric: '{metric}'")
     result = find_similar_competitions_query(query, metric)
@@ -121,38 +123,49 @@ def summarize_url_content(url: str):
     
     # Check if it's a Kaggle competition URL
     if "kaggle.com/c/" in url or "kaggle.com/competitions/" in url:
-        # It's a Kaggle URL, so use the specialized tools
         print("Kaggle URL detected. Using specialized tools for a detailed summary.")
         
-        comp_id_str = get_competition_id_from_url(url) # Returns string message
-        
-        # We need to extract the actual slug from the message or just re-parse
-        # The message is "The competition slug for {slug} is {verified_slug}."
-        match = re.search(r"is ([^.]+)\\.$", comp_id_str)
-        if match:
-            comp_slug = match.group(1)
+        # Extract slug directly here instead of calling the other tool and parsing NL
+        try:
+            path = urlparse(url).path
+            parts = path.strip("/").split("/")
+            if len(parts) > 1 and parts[0] in ["c", "competitions"]:
+                comp_slug = parts[1]
+                
+                # Orchestrate the other tools to build a summary
+                solutions = get_winning_solution_writeups(comp_slug)
+                kernels = get_top_scoring_kernels(comp_slug)
+                tech_stack = analyze_tech_stack(comp_slug)
+                
+                summary = (
+                    f"Summary for competition {comp_slug}:\n"
+                    f"Top Solutions: {solutions}\n"
+                    f"Top Kernels: {kernels}\n"
+                    f"Tech Stack: {tech_stack}"
+                )
+                return summary
+        except Exception as e:
+            print(f"Error extracting slug or summarizing specialized content: {e}")
+            # Fallback to general search below
+            pass
             
-            # Orchestrate the other tools to build a summary
-            solutions = get_winning_solution_writeups(comp_slug)
-            kernels = get_top_scoring_kernels(comp_slug)
-            tech_stack = analyze_tech_stack(comp_slug)
-            
-            summary = (
-                f"Summary for competition {comp_slug}:\n"
-                f"Top Solutions: {solutions}\n"
-                f"Top Kernels: {kernels}\n"
-                f"Tech Stack: {tech_stack}"
-            )
-            return summary
-        else:
-            return f"Could not extract a valid competition slug from URL: {url}"
-            
-    else:
-        # Fallback to generic web_fetch for non-Kaggle URLs
-        print("Non-Kaggle URL detected. Using generic web fetch.")
-        content = web_fetch(prompt=f"Get the content of {url}")
-        
-        if "Error" in content:
-            return f"Could not fetch valid content from the URL: {url}"
-            
+    # Fallback/General logic
+    print("Using generic web fetch or search.")
+    
+    # Try generic web fetch first
+    content = web_fetch(prompt=f"Get the content of {url}")
+    
+    if "Error" not in content and len(content) > 100:
         return content
+    else:
+        # Fallback to Google Search if direct fetch fails (common for protected pages like Kaggle)
+        print("Direct fetch failed or content is protected. Falling back to Google Search.")
+        from src.built_in_tools import google_web_search # Local import to avoid circular dependency
+        
+        query = f"site:{url} summary"
+        if "kaggle.com" in url:
+             # Make the query more specific for Kaggle competitions
+             query = f"{url} winning solutions top kernels approach"
+             
+        search_results = google_web_search(query=query)
+        return f"Direct access to the page was restricted. Here is what I found via search:\n{search_results}"
