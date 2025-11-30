@@ -11,6 +11,7 @@ from src.kaggle_api import (
 )
 from src.built_in_tools import web_fetch  # Import web_fetch
 
+
 def find_similar_competitions(query: str, metric: str = None):
     """
     Searches the Competitions table to find past challenges with similar titles,
