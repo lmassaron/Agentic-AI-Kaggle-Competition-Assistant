@@ -11,16 +11,11 @@ from src.kaggle_api import (
 )
 from src.built_in_tools import web_fetch  # Import web_fetch
 
-datasets = {}
-
-
 def find_similar_competitions(query: str, metric: str = None):
     """
     Searches the Competitions table to find past challenges with similar titles,
     descriptions, or tags.
     """
-    if not datasets:
-        return "Kaggle datasets are not loaded."
 
     print(f"Finding similar competitions for query: '{query}', metric: '{metric}'")
     result = find_similar_competitions_query(datasets, query, metric)
@@ -35,8 +30,6 @@ def get_winning_solution_writeups(competition_id: int):
     """
     Retrieves 'Solution' posts from the discussion forums of a specific competition.
     """
-    if not datasets:
-        return "Kaggle datasets are not loaded."
 
     print(f"Getting winning solution write-ups for competition ID: {competition_id}")
     result = get_winning_solution_writeups_query(datasets, competition_id)
@@ -55,8 +48,6 @@ def get_top_scoring_kernels(
     """
     Finds the highest-voted or best-performing public notebooks for a given competition.
     """
-    if not datasets:
-        return "Kaggle datasets are not loaded."
 
     print(
         f"Getting top scoring kernels for competition ID: {competition_id}, language: '{language}', sort_by: '{sort_by}'"
@@ -74,8 +65,6 @@ def search_code_snippets(keywords: str, competition_id: int = None):
     Searches the actual source code of notebooks to find how specific libraries or
     techniques were implemented.
     """
-    if not datasets:
-        return "Kaggle datasets are not loaded."
 
     print(
         f"Searching for code snippets with keywords: '{keywords}', in competition ID: {competition_id}"
@@ -90,8 +79,6 @@ def search_code_snippets(keywords: str, competition_id: int = None):
 
 def get_competition_id_from_url(url: str):
     """Parses a Kaggle competition URL to find its ID."""
-    if not datasets:
-        return "Kaggle datasets are not loaded."
 
     try:
         path = urlparse(url).path
@@ -115,8 +102,6 @@ def analyze_tech_stack(competition_id: int):
     """
     Analyzes the import statements of top kernels to determine the most popular libraries.
     """
-    if not datasets:
-        return "Kaggle datasets are not loaded."
 
     print(f"Analyzing tech stack for competition ID: {competition_id}")
     result = analyze_tech_stack_query(datasets, competition_id)
