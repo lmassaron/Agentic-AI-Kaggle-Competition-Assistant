@@ -16,18 +16,28 @@ def load_data():
     """Loads the necessary Meta Kaggle CSV files into pandas DataFrames."""
     print("Loading Meta Kaggle datasets...")
 
-    competitions_df = pd.read_csv(os.path.join(META_KAGGLE_PATH, "Competitions.csv"))
+    competitions_df = pd.read_csv(
+        os.path.join(META_KAGGLE_PATH, "Competitions.csv"), engine="pyarrow"
+    )
     competition_tags_df = pd.read_csv(
-        os.path.join(META_KAGGLE_PATH, "CompetitionTags.csv")
+        os.path.join(META_KAGGLE_PATH, "CompetitionTags.csv"), engine="pyarrow"
     )
-    tags_df = pd.read_csv(os.path.join(META_KAGGLE_PATH, "Tags.csv"))
-    forum_topics_df = pd.read_csv(os.path.join(META_KAGGLE_PATH, "ForumTopics.csv"))
-    forum_messages_df = pd.read_csv(os.path.join(META_KAGGLE_PATH, "ForumMessages.csv"))
-    kernels_df = pd.read_csv(os.path.join(META_KAGGLE_PATH, "Kernels.csv"))
+    tags_df = pd.read_csv(os.path.join(META_KAGGLE_PATH, "Tags.csv"), engine="pyarrow")
+    forum_topics_df = pd.read_csv(
+        os.path.join(META_KAGGLE_PATH, "ForumTopics.csv"), engine="pyarrow"
+    )
+    forum_messages_df = pd.read_csv(
+        os.path.join(META_KAGGLE_PATH, "ForumMessages.csv"), engine="pyarrow"
+    )
+    kernels_df = pd.read_csv(
+        os.path.join(META_KAGGLE_PATH, "Kernels.csv"), engine="pyarrow"
+    )
     kernel_versions_df = pd.read_csv(
-        os.path.join(META_KAGGLE_PATH, "KernelVersions.csv")
+        os.path.join(META_KAGGLE_PATH, "KernelVersions.csv"), engine="pyarrow"
     )
-    users_df = pd.read_csv(os.path.join(META_KAGGLE_PATH, "Users.csv"))
+    users_df = pd.read_csv(
+        os.path.join(META_KAGGLE_PATH, "Users.csv"), engine="pyarrow"
+    )
 
     print("Datasets loaded successfully.")
 
