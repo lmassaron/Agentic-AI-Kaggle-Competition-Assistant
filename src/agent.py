@@ -104,21 +104,81 @@ class KaggleAgent:
         self.stats = {"queries_processed": 0, "tools_called": 0, "errors": 0}
 
         self.function_declarations = [
-            # ... (all other function declarations remain the same)
+            FunctionDeclaration(
+                name="find_similar_competitions",
+                description="Searches for similar competitions.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Keywords to search for."},
+                        "metric": {"type": "string", "description": "Evaluation metric to filter by (optional)."}
+                    },
+                    "required": ["query"]
+                }
+            ),
+            FunctionDeclaration(
+                name="get_winning_solution_writeups",
+                description="Retrieves winning solution writeups (kernels) for a competition.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "competition_slug": {"type": "string", "description": "The slug of the competition."}
+                    },
+                    "required": ["competition_slug"]
+                }
+            ),
+            FunctionDeclaration(
+                name="get_top_scoring_kernels",
+                description="Finds top scoring kernels for a competition.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "competition_slug": {"type": "string", "description": "The slug of the competition."},
+                        "language": {"type": "string", "description": "Python or R."},
+                        "sort_by": {"type": "string", "description": "Votes or PublicScore."}
+                    },
+                    "required": ["competition_slug"]
+                }
+            ),
+            FunctionDeclaration(
+                name="search_code_snippets",
+                description="Searches for specific code snippets in kernels.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "keywords": {"type": "string", "description": "Code or text to search for."},
+                        "competition_slug": {"type": "string", "description": "Competition slug to limit search (optional)."}
+                    },
+                    "required": ["keywords"]
+                }
+            ),
+            FunctionDeclaration(
+                name="analyze_tech_stack",
+                description="Analyzes the technology stack (libraries) used in top kernels.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "competition_slug": {"type": "string", "description": "The slug of the competition."}
+                    },
+                    "required": ["competition_slug"]
+                }
+            ),
             FunctionDeclaration(
                 name="summarize_url_content",
                 description="Fetches and summarizes the content of a URL.",
                 parameters={
                     "type": "object",
                     "properties": {"url": {"type": "string"}},
+                    "required": ["url"]
                 },
             ),
             FunctionDeclaration(
                 name="get_competition_id_from_url",
-                description="Parses a Kaggle competition URL to find its competition ID.",
+                description="Parses a Kaggle competition URL to find its competition Slug.",
                 parameters={
                     "type": "object",
                     "properties": {"url": {"type": "string"}},
+                    "required": ["url"]
                 },
             ),
         ]
@@ -130,7 +190,6 @@ class KaggleAgent:
         self.logger.info("Agent initialized")
 
     def _call_function(self, function_call) -> str:
-        # ... (function map updated)
         function_map = {
             "find_similar_competitions": find_similar_competitions,
             "get_winning_solution_writeups": get_winning_solution_writeups,
@@ -140,7 +199,23 @@ class KaggleAgent:
             "summarize_url_content": summarize_url_content,
             "get_competition_id_from_url": get_competition_id_from_url,
         }
-        # ... (rest of the function)
+        
+        func_name = function_call.name
+        func_args = function_call.args
+        
+        if func_name in function_map:
+            try:
+                # Convert args to dict to ensure compatibility
+                args_dict = dict(func_args)
+                self.logger.info("Tool execution started", tool=func_name, args=args_dict)
+                self.stats["tools_called"] += 1
+                result = function_map[func_name](**args_dict)
+                self.logger.info("Tool execution successful", tool=func_name)
+                return str(result)
+            except Exception as e:
+                self.logger.error("Tool execution failed", tool=func_name, error=str(e))
+                return f"Error executing {func_name}: {e}"
+        return f"Unknown function: {func_name}"
 
     def run(self, user_query: str) -> str:
         self.logger.info("Query received", query=user_query)
@@ -154,6 +229,11 @@ class KaggleAgent:
         while True:
             response = chat.send_message(prompt)
             try:
+                # Handle possible empty response or safety blocks
+                if not response.candidates:
+                     response_text = "I'm sorry, I couldn't generate a response."
+                     break
+                     
                 part = response.candidates[0].content.parts[0]
 
                 if part.function_call:
