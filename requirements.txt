@@ -6,3 +6,4 @@ ipykernel
 nbformat
 tqdm
 bs4
+duckduckgo-search

@@ -4,7 +4,6 @@ import requests
 import re
 from bs4 import BeautifulSoup
 
-
 def web_fetch(prompt: str) -> str:
     """
     Fetches the text content of a URL found within the prompt.
@@ -60,3 +59,26 @@ def web_fetch(prompt: str) -> str:
         return f"Timeout Error: {url} took too long to respond."
     except Exception as e:
         return f"An unexpected error occurred: {str(e)}"
+
+def google_web_search(query: str) -> str:
+    """
+    Performs a web search using DuckDuckGo (via duckduckgo_search package).
+    """
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=5))
+            
+        if not results:
+            return f"No results found for query: {query}"
+            
+        formatted_results = ""
+        for i, res in enumerate(results, 1):
+            formatted_results += f"{i}. {res.get('title', 'No Title')}\n   URL: {res.get('href', 'No URL')}\n   Snippet: {res.get('body', 'No Snippet')}\n\n"
+            
+        return formatted_results
+        
+    except ImportError:
+        return "Error: duckduckgo-search package is not installed. Please run 'pip install duckduckgo-search'."
+    except Exception as e:
+        return f"Error performing search: {e}"

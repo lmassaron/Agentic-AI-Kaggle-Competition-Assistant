@@ -22,7 +22,16 @@ def find_similar_competitions_query(query, metric=None):
     """
     try:
         competitions_response = api.competitions_list(search=query)
-        competitions = competitions_response.competitions if hasattr(competitions_response, 'competitions') else []
+        # Handle different API response structures (list vs object)
+        if hasattr(competitions_response, 'competitions'):
+            competitions = competitions_response.competitions
+        elif isinstance(competitions_response, list):
+            competitions = competitions_response
+        else:
+            print(f"Unexpected competitions_list response type: {type(competitions_response)}")
+            competitions = []
+            
+        print(f"Debug: Found {len(competitions)} raw competitions.")
     except Exception as e:
         print(f"Error searching competitions: {e}")
         return []
@@ -231,7 +240,13 @@ def get_competition_id_from_slug_query(slug):
         # Fallback: check competitions list
         try:
              comps_response = api.competitions_list(search=slug)
-             comps = comps_response.competitions if hasattr(comps_response, 'competitions') else []
+             if hasattr(comps_response, 'competitions'):
+                 comps = comps_response.competitions
+             elif isinstance(comps_response, list):
+                 comps = comps_response
+             else:
+                 comps = []
+                 
              for c in comps:
                  if get_slug_from_ref(c.ref).lower() == slug.lower():
                      return slug
